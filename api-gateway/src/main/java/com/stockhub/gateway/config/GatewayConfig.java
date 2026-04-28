@@ -26,19 +26,12 @@ public class GatewayConfig {
                 // Public - Login and Register
                 // No token needed
                 .route("auth-public", r -> r
-                        .path("/api/auth/login")
+                        .path("/api/auth/login",
+                                "/api/auth/users/role/**")
                         .uri("lb://auth-service"))
 
-                // Protected - Any logged in user
-                // View and update own profile
-                .route("auth-profile", r -> r
-                        .path("/api/auth/users/{userId}",
-                                "/api/auth/users/{userId}/profile",
-                                "/api/auth/users/{userId}/password")
-                        .filters(f -> f.filter(
-                                jwtFilter.apply(
-                                        anyAuthenticated())))
-                        .uri("lb://auth-service"))
+
+
 
                 // Admin only - Manage all users
                 .route("auth-admin", r -> r
@@ -49,6 +42,18 @@ public class GatewayConfig {
                                 jwtFilter.apply(
                                         withRoles("ADMIN"))))
                         .uri("lb://auth-service"))
+
+                // Protected - Any logged in user
+                // View and update own profile
+                .route("auth-profile", r -> r
+                        .path("/api/auth/users/{userId}/profile",
+                                "/api/auth/users/{userId}/password")
+                        .filters(f -> f.filter(
+                                jwtFilter.apply(
+                                        anyAuthenticated())))
+                        .uri("lb://auth-service"))
+
+
 
 
                 // PRODUCT SERVICE
@@ -331,6 +336,15 @@ public class GatewayConfig {
                 .route("alert-delete", r -> r
                         .path("/api/alerts/**")
                         .and().method("DELETE")
+                        .filters(f -> f.filter(
+                                jwtFilter.apply(
+                                        withRoles("ADMIN"))))
+                        .uri("lb://alert-service"))
+
+                // Add manual trigger route
+                .route("alert-trigger", r -> r
+                        .path("/api/alerts/trigger-check")
+                        .and().method("POST")
                         .filters(f -> f.filter(
                                 jwtFilter.apply(
                                         withRoles("ADMIN"))))
