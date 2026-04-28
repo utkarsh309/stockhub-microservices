@@ -24,10 +24,9 @@ public class AuthController {
     private final AuthService authService;
 
     // ─── 1. Register ───────────────────────────
-    // PUBLIC - No token needed
     // POST http://localhost:8081/api/auth/register
     @PostMapping("/register")
-    @PreAuthorize("hasRole('ADMIN')")
+//    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<User> register(
             @Valid @RequestBody
             RegisterRequest request) {
@@ -77,7 +76,6 @@ public class AuthController {
     // ADMIN ONLY
     // GET http://localhost:8081/api/auth/users/role/STAFF
     @GetMapping("/users/role/{role}")
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<User>> getUsersByRole(
             @PathVariable String role) {
 

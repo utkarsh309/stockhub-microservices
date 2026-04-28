@@ -36,33 +36,23 @@ public class JwtUtil {
     // ─── 1. Generate Token ─────────────────────
     // Called after successful login
     public String generateToken(User user) {
-
-        Map<String, Object> extraClaims
-                = new HashMap<>();
-
-        // Store role and userId in token
-        extraClaims.put("role",
-                user.getRole().name());
-        extraClaims.put("userId",
-                user.getUserId());
-        extraClaims.put("fullName",
-                user.getFullName());
+        Map<String, Object> extraClaims = new HashMap<>();
+        extraClaims.put("role", user.getRole().name());
+        // Store userId as extra claim too
+        extraClaims.put("userId", user.getUserId());
+        // Store email as extra claim
+        extraClaims.put("email", user.getEmail());
 
         return Jwts.builder()
-                // Extra data in payload
                 .setClaims(extraClaims)
-                // Email as subject
-                .setSubject(user.getEmail())
-                // When token was created
+                // Store userId as subject
+                .setSubject(
+                        String.valueOf(user.getUserId()))
                 .setIssuedAt(
-                        new Date(
-                                System.currentTimeMillis()))
-                // When token expires (8 hours)
+                        new Date(System.currentTimeMillis()))
                 .setExpiration(
-                        new Date(
-                                System.currentTimeMillis()
-                                        + jwtExpiration))
-                // Sign with secret key
+                        new Date(System.currentTimeMillis()
+                                + jwtExpiration))
                 .signWith(getSigningKey(),
                         SignatureAlgorithm.HS256)
                 .compact();
@@ -72,7 +62,7 @@ public class JwtUtil {
     // Used in JwtAuthFilter to find user
     public String extractEmail(String token) {
         return extractClaim(token,
-                Claims::getSubject);
+                claims -> claims.get("email", String.class));
     }
 
     // ─── 3. Extract Role from Token ────────────

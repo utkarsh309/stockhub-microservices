@@ -167,6 +167,9 @@ public class AuthServiceImpl implements AuthService {
             user.setDepartment(
                     request.getDepartment());
         }
+        if (request.getRole() != null) {
+            user.setRole(request.getRole());
+        }
 
         User updatedUser = userRepository.save(user);
 

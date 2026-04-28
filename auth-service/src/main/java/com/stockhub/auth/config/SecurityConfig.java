@@ -47,7 +47,9 @@ public class SecurityConfig {
                         // Public endpoints
                         // No token needed
                         .requestMatchers(
-                                "/api/auth/login"
+                                "/api/auth/login",
+                                "/api/auth/register",
+                                "/api/auth/users/role/**"
                         ).permitAll()
 
                         // Only ADMIN can access
