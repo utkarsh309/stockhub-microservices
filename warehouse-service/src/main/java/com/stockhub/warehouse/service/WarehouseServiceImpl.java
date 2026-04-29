@@ -9,6 +9,8 @@ import com.stockhub.warehouse.repository.StockLevelRepository;
 import com.stockhub.warehouse.repository.WarehouseRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
@@ -29,6 +31,7 @@ public class WarehouseServiceImpl
 
     // ─── Create Warehouse ──────────────────────
     @Override
+    @CacheEvict(value = "warehouses", allEntries = true)
     public WarehouseResponse createWarehouse(
             WarehouseRequest request) {
         Warehouse warehouse = Warehouse.builder()
@@ -49,6 +52,7 @@ public class WarehouseServiceImpl
     // ─── Get Warehouse By ID ───────────────────
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "warehouses", key = "#warehouseId")
     public WarehouseResponse getWarehouseById(
             Integer warehouseId) {
         return mapToWarehouseResponse(
@@ -58,6 +62,7 @@ public class WarehouseServiceImpl
     // ─── Get All Warehouses ────────────────────
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "warehouses", key = "'all'")
     public List<WarehouseResponse> getAllWarehouses() {
         return warehouseRepository
                 .findByIsActiveTrue()
@@ -68,6 +73,7 @@ public class WarehouseServiceImpl
 
     // ─── Update Warehouse ──────────────────────
     @Override
+    @CacheEvict(value = "warehouses", allEntries = true)
     public WarehouseResponse updateWarehouse(
             Integer warehouseId,
             WarehouseRequest request) {
@@ -85,6 +91,7 @@ public class WarehouseServiceImpl
 
     // ─── Deactivate Warehouse ──────────────────
     @Override
+    @CacheEvict(value = "warehouses", allEntries = true)
     public void deactivateWarehouse(
             Integer warehouseId) {
         Warehouse warehouse =
@@ -97,6 +104,7 @@ public class WarehouseServiceImpl
 
     // ─── Activate Warehouse ────────────────────
     @Override
+    @CacheEvict(value = "warehouses", allEntries = true)
     public void activateWarehouse(
             Integer warehouseId) {
         Warehouse warehouse =
@@ -108,9 +116,10 @@ public class WarehouseServiceImpl
     }
 
     // ─── Add Stock ─────────────────────────────
-    // Used internally by transfer and purchase
-    // Movement recorded by the caller
+// Used internally by transfer and purchase
+// Movement recorded by the caller
     @Override
+    @CacheEvict(value = "stock", allEntries = true)
     public StockLevelResponse addStock(
             StockUpdateRequest request) {
 
@@ -140,14 +149,33 @@ public class WarehouseServiceImpl
                 request.getProductId(),
                 request.getWarehouseId());
 
-        return mapToStockResponse(
-                stockLevelRepository.save(stock));
+        StockLevel saved = stockLevelRepository.save(stock);
+
+        // Record STOCK_IN only when called directly
+        // (performedBy is null when called internally
+        // by transfer or purchase-service)
+        if (request.getPerformedBy() != null) {
+            MovementRequest movement = new MovementRequest(
+                    request.getProductId(),
+                    request.getWarehouseId(),
+                    "STOCK_IN",
+                    request.getQuantity(),
+                    saved.getQuantity(),
+                    null,
+                    "MANUAL",
+                    request.getPerformedBy(),
+                    request.getNotes());
+            movementClient.recordMovement(movement);
+        }
+
+        return mapToStockResponse(saved);
     }
 
     // ─── Deduct Stock ──────────────────────────
-    // Used internally by transfer
-    // Movement recorded by the caller
+// Used internally by transfer
+// Movement recorded by the caller
     @Override
+    @CacheEvict(value = "stock", allEntries = true)
     public StockLevelResponse deductStock(
             StockUpdateRequest request) {
 
@@ -177,14 +205,33 @@ public class WarehouseServiceImpl
                 request.getProductId(),
                 request.getWarehouseId());
 
-        return mapToStockResponse(
-                stockLevelRepository.save(stock));
+        StockLevel saved = stockLevelRepository.save(stock);
+
+        // Record STOCK_OUT only when called directly
+        // (performedBy is null when called internally
+        // by transfer or purchase-service)
+        if (request.getPerformedBy() != null) {
+            MovementRequest movement = new MovementRequest(
+                    request.getProductId(),
+                    request.getWarehouseId(),
+                    "STOCK_OUT",
+                    request.getQuantity(),
+                    saved.getQuantity(),
+                    null,
+                    "MANUAL",
+                    request.getPerformedBy(),
+                    request.getNotes());
+            movementClient.recordMovement(movement);
+        }
+
+        return mapToStockResponse(saved);
     }
 
     // ─── Reserve Stock ─────────────────────────
     // Marks stock as reserved for pending orders
     // No movement recorded - just reservation
     @Override
+    @CacheEvict(value = "stock", allEntries = true)
     public StockLevelResponse reserveStock(
             StockUpdateRequest request) {
 
@@ -215,6 +262,7 @@ public class WarehouseServiceImpl
     // Releases reserved stock back to available
     // No movement recorded - just release
     @Override
+    @CacheEvict(value = "stock", allEntries = true)
     public StockLevelResponse releaseStock(
             StockUpdateRequest request) {
 
@@ -240,6 +288,7 @@ public class WarehouseServiceImpl
     // Both in same @Transactional
     // If one fails BOTH rollback ✅
     @Override
+    @CacheEvict(value = "stock", allEntries = true)
     public void transferStock(
             StockTransferRequest request) {
 
@@ -320,6 +369,7 @@ public class WarehouseServiceImpl
     // Manual correction or write off
     // Records ADJUSTMENT or WRITE_OFF movement
     @Override
+    @CacheEvict(value = "stock", allEntries = true)
     public StockLevelResponse adjustStock(
             StockUpdateRequest request,
             String movementType,
@@ -396,6 +446,7 @@ public class WarehouseServiceImpl
     // ─── Get Stock Level ───────────────────────
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "stock", key = "#warehouseId + ':' + #productId")
     public StockLevelResponse getStockLevel(
             Integer warehouseId,
             Integer productId) {
@@ -407,6 +458,7 @@ public class WarehouseServiceImpl
     // ─── Get Stock By Warehouse ────────────────
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "stock", key = "'warehouse:' + #warehouseId")
     public List<StockLevelResponse> getStockByWarehouse(
             Integer warehouseId) {
         return stockLevelRepository
@@ -419,6 +471,7 @@ public class WarehouseServiceImpl
     // ─── Get Stock By Product ──────────────────
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "stock", key = "'product:' + #productId")
     public List<StockLevelResponse> getStockByProduct(
             Integer productId) {
         return stockLevelRepository
