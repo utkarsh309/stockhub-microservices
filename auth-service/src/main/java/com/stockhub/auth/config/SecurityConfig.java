@@ -52,6 +52,14 @@ public class SecurityConfig {
                                 "/api/auth/users/role/**"
                         ).permitAll()
 
+                        //  FOR SWAGGER
+                        .requestMatchers(
+                                "/swagger-ui/**",
+                                "/swagger-ui.html",
+                                "/api-docs/**",
+                                "/v3/api-docs/**"
+                        ).permitAll()
+
                         // Only ADMIN can access
                         .requestMatchers(
                                 "/api/auth/users"
