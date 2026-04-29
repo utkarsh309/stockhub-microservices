@@ -21,15 +21,14 @@ import java.util.stream.Collectors;
 public class AlertServiceImpl implements AlertService {
 
     private final AlertRepository alertRepository;
-
-    // Use our new EmailService instead of
-    // JavaMailSender directly
     private final EmailService emailService;
 
     @Value("${app.alert.admin-email}")
     private String adminEmail;
 
     // ─── Send Alert ────────────────────────────
+    // called by AlertConsumer after consuming
+    // message from RabbitMQ queue
     @Override
     public AlertResponse sendAlert(
             AlertRequest request) {
@@ -53,7 +52,6 @@ public class AlertServiceImpl implements AlertService {
         // Send email ONLY for CRITICAL alerts
         if (request.getSeverity()
                 == AlertSeverity.CRITICAL) {
-            // Send email via EmailService
             emailService.sendEmail(
                     adminEmail,
                     "🚨 CRITICAL ALERT: "
