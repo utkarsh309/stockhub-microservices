@@ -28,4 +28,6 @@ public interface ProductService {
     void deactivateProduct(Integer productId);
 
     void activateProduct(Integer productId);
+
+    List<ProductResponse> getLowStockProducts();
 }

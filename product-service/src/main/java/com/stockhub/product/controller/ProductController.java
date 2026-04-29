@@ -73,4 +73,11 @@ public class ProductController {
         productService.activateProduct(productId);
         return ResponseEntity.ok("Product activated successfully");
     }
+
+    // ALL roles - used by dashboard to show low-stock alerts
+    @GetMapping("/low-stock")
+    public ResponseEntity<List<ProductResponse>> getLowStock() {
+        return ResponseEntity.ok(productService.getLowStockProducts());
+    }
+
 }

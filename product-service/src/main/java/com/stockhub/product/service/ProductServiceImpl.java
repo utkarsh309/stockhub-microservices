@@ -8,6 +8,8 @@ import com.stockhub.product.exception.ProductNotFoundException;
 import com.stockhub.product.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +25,7 @@ public class ProductServiceImpl implements ProductService {
     private final ProductRepository productRepository;
 
     @Override
+    @CacheEvict(value = "products", allEntries = true)
     public ProductResponse createProduct(ProductRequest request) {
 
         // check duplicate SKU
@@ -55,6 +58,7 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "products", key = "#productId")
     public ProductResponse getProductById(Integer productId) {
 
         // fetch and convert
@@ -63,6 +67,7 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "products", key = "'sku:' + #sku")
     public ProductResponse getProductBySku(String sku) {
 
         // fetch by SKU or throw exception
@@ -75,6 +80,7 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "products", key = "'all'")
     public List<ProductResponse> getAllProducts() {
 
         // fetch active products and convert
@@ -107,6 +113,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @CacheEvict(value = "products", allEntries = true)
     public ProductResponse updateProduct(Integer productId,
                                          ProductRequest request) {
 
@@ -132,6 +139,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @CacheEvict(value = "products", allEntries = true)
     public void deactivateProduct(Integer productId) {
 
         // deactivate product (soft delete)
@@ -143,6 +151,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @CacheEvict(value = "products", allEntries = true)
     public void activateProduct(Integer productId) {
 
         // activate product
@@ -151,6 +160,18 @@ public class ProductServiceImpl implements ProductService {
         productRepository.save(product);
 
         log.info("Product activated: {}", product.getSku());
+    }
+
+    // Low stock products
+    @Override
+    @Transactional(readOnly = true)
+    public List<ProductResponse> getLowStockProducts() {
+
+        // fetch products that have a reorder level set (low stock candidates)
+        return productRepository.findLowStockProducts()
+                .stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
     }
 
     // fetch product by id
