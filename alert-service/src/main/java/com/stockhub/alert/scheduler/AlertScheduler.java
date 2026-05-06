@@ -35,7 +35,8 @@ public class AlertScheduler {
     // alertService.sendAlert() calls below
     private final AlertPublisher alertPublisher;
 
-    @Scheduled(fixedDelay = 900000, initialDelay = 15000)
+//    @Scheduled(fixedDelay = 900000, initialDelay = 15000)
+    @Scheduled(fixedDelay = 60000, initialDelay = 5000)
     public void checkLowStock() {
         log.info("=== Low Stock Check Started ===");
 
