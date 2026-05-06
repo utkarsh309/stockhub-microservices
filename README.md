@@ -174,7 +174,7 @@ Default credentials used across all services (configured in `application-dev.pro
 
 ```
 Username: root
-Password: mysql
+Password: ****
 Host:     localhost:3306
 ```
 
